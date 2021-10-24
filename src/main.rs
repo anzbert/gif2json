@@ -41,14 +41,14 @@ fn main() {
         2 => {}
         _ => {
             println!(
-                "\nError: Invalid Parameters\n\n
+                "\nError: Invalid parameters\n\n
             Syntax: gif2json [image_file].gif\n"
             );
             process::exit(1);
         }
     }
 
-    let filename = args.get(1).expect("Error reading first Argument");
+    let input_filename = args.get(1).expect("Error reading first argument");
 
     // let data = match std::fs::metadata(filename) {
     //     Ok(metadata) => metadata,
@@ -58,18 +58,18 @@ fn main() {
     //     }
     // };
 
-    if !filename.ends_with(".gif") {
+    if !input_filename.ends_with(".gif") {
         println!(
-            "\nError: Invalid Filetype. Not a 'gif'\n\n
+            "\nError: Invalid filetype. Only files with '.gif' suffix\n\n
     Syntax: gif2json [image_file].gif\n"
         );
         process::exit(1);
     }
 
-    let file = match File::open(filename) {
+    let file = match File::open(input_filename) {
         Ok(file) => file,
         Err(err) => {
-            println!("Error loading specified Image: {}", err);
+            println!("Error loading specified Image File: {}", err);
             process::exit(1);
         }
     };
@@ -77,7 +77,7 @@ fn main() {
     let decoder = match GifDecoder::new(file) {
         Ok(gif) => gif,
         Err(err) => {
-            println!("Error decoding Image: {}", err);
+            println!("Error decoding gif: {}", err);
             process::exit(1);
         }
     };
@@ -85,7 +85,7 @@ fn main() {
     let frames = decoder
         .into_frames()
         .collect_frames()
-        .expect("Error splitting gif into frames");
+        .expect("Error splitting gif into individual frames");
 
     let mut output = OutputObject::new();
 
@@ -95,7 +95,7 @@ fn main() {
         let pixels_as_rgb_vec: Vec<(u8, u8, u8)> = image_buffer
             .pixels()
             .map(|p| {
-                let (r, g, b, _) = p.channels4(); // ditch alpha
+                let (r, g, b, _) = p.channels4(); // ditch alpha, pass on RGB
                 (r, g, b)
             })
             .collect();
@@ -105,9 +105,13 @@ fn main() {
         output.add(decoded_frame);
     }
 
-    let mut json_file = File::create("output.json").expect("Error creating output file");
+    let output_filename = format!("{}.json", &input_filename[0..input_filename.len() - 4]);
+
+    let mut json_file = File::create(&output_filename).expect("Error creating output file");
+
     json_file
         .write_all(output.to_json_string().as_bytes())
         .expect("Error writing to output file");
-    println!("\nWritten to: 'output.json'\n");
+
+    println!("\nSuccessfully written to: '{}'\n", output_filename);
 }
