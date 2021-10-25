@@ -9,13 +9,13 @@ use image::{AnimationDecoder, Pixel};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-pub struct RgbImageData {
+pub struct RgbaImageData {
     dimensions: (u32, u32),
     length: u32,
     frames: Vec<DecodedFrame>,
 }
-impl RgbImageData {
-    pub fn new_from_bytes(bytes: &[u8]) -> Result<RgbImageData, Box<dyn Error>> {
+impl RgbaImageData {
+    pub fn new_from_bytes(bytes: &[u8]) -> Result<RgbaImageData, Box<dyn Error>> {
         let decoder = GifDecoder::new(bytes)?;
 
         let frames = decoder.into_frames().collect_frames()?;
@@ -26,23 +26,23 @@ impl RgbImageData {
         for frame in frames.iter() {
             let image_buffer = frame.buffer();
 
-            let pixels_as_rgb_vec: Vec<(u8, u8, u8)> = image_buffer
+            let pixels_as_rgba_vec: Vec<(u8, u8, u8, u8)> = image_buffer
                 .pixels()
                 .map(|p| {
-                    let (r, g, b, _) = p.channels4(); // ditch alpha, pass on RGB
-                    (r, g, b)
+                    let (r, g, b, a) = p.channels4();
+                    (r, g, b, a)
                 })
                 .collect();
 
             let decoded_frame =
-                DecodedFrame::new(frame.delay().numer_denom_ms(), pixels_as_rgb_vec);
+                DecodedFrame::new(frame.delay().numer_denom_ms(), pixels_as_rgba_vec);
 
             output.add(decoded_frame);
         }
         Ok(output)
     }
 
-    pub fn new_from_gif(path: &Path) -> Result<RgbImageData, Box<dyn Error>> {
+    pub fn new_from_gif(path: &Path) -> Result<RgbaImageData, Box<dyn Error>> {
         if path.extension().unwrap() != "gif" {
             Err(format!(
                 "Invalid Path : {:?}\n
@@ -63,16 +63,16 @@ impl RgbImageData {
         for frame in frames.iter() {
             let image_buffer = frame.buffer();
 
-            let pixels_as_rgb_vec: Vec<(u8, u8, u8)> = image_buffer
+            let pixels_as_rgba_vec: Vec<(u8, u8, u8, u8)> = image_buffer
                 .pixels()
                 .map(|p| {
-                    let (r, g, b, _) = p.channels4(); // ditch alpha, pass on RGB
-                    (r, g, b)
+                    let (r, g, b, a) = p.channels4();
+                    (r, g, b, a)
                 })
                 .collect();
 
             let decoded_frame =
-                DecodedFrame::new(frame.delay().numer_denom_ms(), pixels_as_rgb_vec);
+                DecodedFrame::new(frame.delay().numer_denom_ms(), pixels_as_rgba_vec);
 
             output.add(decoded_frame);
         }
@@ -109,7 +109,7 @@ impl RgbImageData {
         Ok(())
     }
 
-    pub fn get_frame_vec_ref(&self, frame: usize) -> Option<&Vec<(u8, u8, u8)>> {
+    pub fn get_frame_vec_ref(&self, frame: usize) -> Option<&Vec<(u8, u8, u8, u8)>> {
         match self.frames.get(frame) {
             Some(f) => Some(&f.pixels),
             None => None,
@@ -129,11 +129,11 @@ impl RgbImageData {
 #[derive(Serialize, Deserialize)]
 struct DecodedFrame {
     delay_ratio: (u32, u32),
-    pixels: Vec<(u8, u8, u8)>,
+    pixels: Vec<(u8, u8, u8, u8)>,
 }
 
 impl DecodedFrame {
-    fn new(delay_ratio: (u32, u32), pixels: Vec<(u8, u8, u8)>) -> Self {
+    fn new(delay_ratio: (u32, u32), pixels: Vec<(u8, u8, u8, u8)>) -> Self {
         Self {
             delay_ratio,
             pixels,

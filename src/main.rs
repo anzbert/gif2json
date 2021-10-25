@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::{env, process};
 
-use gif2json::RgbImageData;
+use gif2json::RgbaImageData;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -22,7 +22,7 @@ fn main() {
         process::exit(1);
     }
 
-    let image = match RgbImageData::new_from_gif(path) {
+    let image = match RgbaImageData::new_from_gif(path) {
         Ok(data) => data,
         Err(err) => {
             println!("\nError: {}\n\nSyntax: gif2json [image_file].gif\n", err);
