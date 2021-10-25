@@ -8,11 +8,17 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 struct OutputObject {
+    dimensions: (u32, u32),
+    length: u32,
     frames: Vec<DecodedFrame>,
 }
 impl OutputObject {
-    fn new() -> Self {
-        Self { frames: Vec::new() }
+    fn new(length: usize, dimensions: (u32, u32)) -> Self {
+        Self {
+            dimensions,
+            length: length as u32,
+            frames: Vec::new(),
+        }
     }
     fn add(&mut self, next_frame: DecodedFrame) {
         self.frames.push(next_frame);
@@ -24,13 +30,16 @@ impl OutputObject {
 
 #[derive(Serialize, Deserialize)]
 struct DecodedFrame {
-    dimensions: (u32, u32),
+    delay_ratio: (u32, u32),
     pixels: Vec<(u8, u8, u8)>,
 }
 
 impl DecodedFrame {
-    fn new(pixels: Vec<(u8, u8, u8)>, dimensions: (u32, u32)) -> Self {
-        Self { dimensions, pixels }
+    fn new(delay_ratio: (u32, u32), pixels: Vec<(u8, u8, u8)>) -> Self {
+        Self {
+            delay_ratio,
+            pixels,
+        }
     }
 }
 
@@ -49,14 +58,6 @@ fn main() {
     }
 
     let input_filename = args.get(1).expect("Error reading first argument");
-
-    // let data = match std::fs::metadata(filename) {
-    //     Ok(metadata) => metadata,
-    //     Err(err) => {
-    //         println!("Error Reading File's Metadata: {}", err);
-    //         process::exit(1);
-    //     }
-    // };
 
     if !input_filename.ends_with(".gif") {
         println!(
@@ -87,7 +88,8 @@ fn main() {
         .collect_frames()
         .expect("Error splitting gif into individual frames");
 
-    let mut output = OutputObject::new();
+    let dimensions = frames.get(0).unwrap().buffer().dimensions();
+    let mut output = OutputObject::new(frames.len(), dimensions);
 
     for frame in frames.iter() {
         let image_buffer = frame.buffer();
@@ -100,7 +102,7 @@ fn main() {
             })
             .collect();
 
-        let decoded_frame = DecodedFrame::new(pixels_as_rgb_vec, image_buffer.dimensions());
+        let decoded_frame = DecodedFrame::new(frame.delay().numer_denom_ms(), pixels_as_rgb_vec);
 
         output.add(decoded_frame);
     }
