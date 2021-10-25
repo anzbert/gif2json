@@ -15,6 +15,33 @@ pub struct RgbImageData {
     frames: Vec<DecodedFrame>,
 }
 impl RgbImageData {
+    pub fn new_from_bytes(bytes: &[u8]) -> Result<RgbImageData, Box<dyn Error>> {
+        let decoder = GifDecoder::new(bytes)?;
+
+        let frames = decoder.into_frames().collect_frames()?;
+
+        let dimensions = frames.get(0).unwrap().buffer().dimensions();
+        let mut output = Self::new(frames.len(), dimensions);
+
+        for frame in frames.iter() {
+            let image_buffer = frame.buffer();
+
+            let pixels_as_rgb_vec: Vec<(u8, u8, u8)> = image_buffer
+                .pixels()
+                .map(|p| {
+                    let (r, g, b, _) = p.channels4(); // ditch alpha, pass on RGB
+                    (r, g, b)
+                })
+                .collect();
+
+            let decoded_frame =
+                DecodedFrame::new(frame.delay().numer_denom_ms(), pixels_as_rgb_vec);
+
+            output.add(decoded_frame);
+        }
+        Ok(output)
+    }
+
     pub fn new_from_gif(path: &Path) -> Result<RgbImageData, Box<dyn Error>> {
         if path.extension().unwrap() != "gif" {
             Err(format!(
