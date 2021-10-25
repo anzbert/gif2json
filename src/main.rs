@@ -1,48 +1,7 @@
-use std::fs::File;
-use std::io::prelude::*;
+use std::path::{Path, PathBuf};
 use std::{env, process};
 
-use image::gif::GifDecoder;
-use image::{AnimationDecoder, Pixel};
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize)]
-struct OutputObject {
-    dimensions: (u32, u32),
-    length: u32,
-    frames: Vec<DecodedFrame>,
-}
-impl OutputObject {
-    fn new(length: usize, dimensions: (u32, u32)) -> Self {
-        Self {
-            dimensions,
-            length: length as u32,
-            frames: Vec::new(),
-        }
-    }
-    fn add(&mut self, next_frame: DecodedFrame) {
-        self.frames.push(next_frame);
-    }
-    fn to_json_string(&self) -> String {
-        serde_json::to_string(self).expect("Error creating JSON string")
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-struct DecodedFrame {
-    delay_ratio: (u32, u32),
-    pixels: Vec<(u8, u8, u8)>,
-}
-
-impl DecodedFrame {
-    fn new(delay_ratio: (u32, u32), pixels: Vec<(u8, u8, u8)>) -> Self {
-        Self {
-            delay_ratio,
-            pixels,
-        }
-    }
-}
-
+use gif2json::ImageData;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -56,64 +15,23 @@ fn main() {
             process::exit(1);
         }
     }
+    let path = Path::new(args.get(1).expect("error getting path"));
 
-    let input_filename = args.get(1).expect("Error reading first argument");
-
-    if !input_filename.ends_with(".gif") {
-        println!(
-            "\nError: Invalid filetype. Only files with '.gif' suffix\n\n
-    Syntax: gif2json [image_file].gif\n"
-        );
-        process::exit(1);
-    }
-
-    let file = match File::open(input_filename) {
-        Ok(file) => file,
+    let image = match ImageData::new_from_gif(path) {
+        Ok(i) => i,
         Err(err) => {
-            println!("Error loading specified Image File: {}", err);
+            println!("\nError: {}\n\nSyntax: gif2json [image_file].gif\n", err);
             process::exit(1);
         }
     };
 
-    let decoder = match GifDecoder::new(file) {
-        Ok(gif) => gif,
+    let mut output = PathBuf::from(path);
+    output.set_extension("json");
+    match image.save_as_json(&output) {
+        Ok(_) => {}
         Err(err) => {
-            println!("Error decoding gif: {}", err);
+            println!("\nError: {}\n\nSyntax: gif2json [image_file].gif\n", err);
             process::exit(1);
         }
-    };
-
-    let frames = decoder
-        .into_frames()
-        .collect_frames()
-        .expect("Error splitting gif into individual frames");
-
-    let dimensions = frames.get(0).unwrap().buffer().dimensions();
-    let mut output = OutputObject::new(frames.len(), dimensions);
-
-    for frame in frames.iter() {
-        let image_buffer = frame.buffer();
-
-        let pixels_as_rgb_vec: Vec<(u8, u8, u8)> = image_buffer
-            .pixels()
-            .map(|p| {
-                let (r, g, b, _) = p.channels4(); // ditch alpha, pass on RGB
-                (r, g, b)
-            })
-            .collect();
-
-        let decoded_frame = DecodedFrame::new(frame.delay().numer_denom_ms(), pixels_as_rgb_vec);
-
-        output.add(decoded_frame);
     }
-
-    let output_filename = format!("{}.json", &input_filename[0..input_filename.len() - 4]);
-
-    let mut json_file = File::create(&output_filename).expect("Error creating output file");
-
-    json_file
-        .write_all(output.to_json_string().as_bytes())
-        .expect("Error writing to output file");
-
-    println!("\nSuccessfully written to: '{}'\n", output_filename);
 }
