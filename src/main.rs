@@ -17,6 +17,11 @@ fn main() {
     }
     let path = Path::new(args.get(1).expect("error getting path"));
 
+    if !path.exists() {
+        println!("\nError: Path does not exist\n");
+        process::exit(1);
+    }
+
     let image = match RgbImageData::new_from_gif(path) {
         Ok(data) => data,
         Err(err) => {
