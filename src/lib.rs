@@ -9,15 +9,19 @@ use image::{AnimationDecoder, Pixel};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-pub struct ImageData {
+pub struct RgbImageData {
     dimensions: (u32, u32),
     length: u32,
     frames: Vec<DecodedFrame>,
 }
-impl ImageData {
-    pub fn new_from_gif(path: &Path) -> Result<ImageData, Box<dyn Error>> {
+impl RgbImageData {
+    pub fn new_from_gif(path: &Path) -> Result<RgbImageData, Box<dyn Error>> {
         if path.extension().unwrap() != "gif" {
-            Err(format!("wrong suffix. only .gif. provided path:{:?}", path))?;
+            Err(format!(
+                "Invalid Path : {:?}\n
+            Only use .gif files\n",
+                path
+            ))?;
         };
 
         let file = File::open(path)?;
@@ -58,13 +62,14 @@ impl ImageData {
     fn add(&mut self, next_frame: DecodedFrame) {
         self.frames.push(next_frame);
     }
-    pub fn to_json_string(&self) -> String {
+    fn to_json_string(&self) -> String {
         serde_json::to_string(self).expect("Error creating JSON string")
     }
     pub fn save_as_json(&self, path: &Path) -> Result<(), Box<dyn Error>> {
         if path.extension().unwrap() != "json" {
             Err(format!(
-                "wrong suffix. only .json. provided path:{:?}",
+                "Invalid Path : {:?}\n
+            Only use .json suffix\n",
                 path
             ))?;
         };
