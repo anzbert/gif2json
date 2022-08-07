@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::result::Result;
 
-use image::gif::GifDecoder;
+use image::codecs::gif::GifDecoder;
 use image::{AnimationDecoder, Pixel};
 use serde::{Deserialize, Serialize};
 
@@ -28,9 +28,9 @@ impl RgbaImageData {
 
             let pixels_as_rgba_vec: Vec<(u8, u8, u8, u8)> = image_buffer
                 .pixels()
-                .map(|p| {
-                    let (r, g, b, a) = p.channels4();
-                    (r, g, b, a)
+                .map(|p| match p.channels() {
+                    [r, g, b, a] => (*r, *g, *b, *a),
+                    _ => (0, 0, 0, 0),
                 })
                 .collect();
 
@@ -65,9 +65,9 @@ impl RgbaImageData {
 
             let pixels_as_rgba_vec: Vec<(u8, u8, u8, u8)> = image_buffer
                 .pixels()
-                .map(|p| {
-                    let (r, g, b, a) = p.channels4();
-                    (r, g, b, a)
+                .map(|p| match p.channels() {
+                    [r, g, b, a] => (*r, *g, *b, *a),
+                    _ => (0, 0, 0, 0),
                 })
                 .collect();
 
