@@ -10,9 +10,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct RgbaImageData {
-    dimensions: (u32, u32),
-    length: u32,
-    frames: Vec<DecodedFrame>,
+    pub dimensions: (u32, u32),
+    pub frames: Vec<DecodedFrame>,
 }
 impl RgbaImageData {
     pub fn new_from_bytes(bytes: &[u8]) -> Result<RgbaImageData, Box<dyn Error>> {
@@ -21,7 +20,7 @@ impl RgbaImageData {
         let frames = decoder.into_frames().collect_frames()?;
 
         let dimensions = frames.get(0).unwrap().buffer().dimensions();
-        let mut output = Self::new(frames.len(), dimensions);
+        let mut output = Self::new(dimensions);
 
         for frame in frames.iter() {
             let image_buffer = frame.buffer();
@@ -58,7 +57,7 @@ impl RgbaImageData {
         let frames = decoder.into_frames().collect_frames()?;
 
         let dimensions = frames.get(0).unwrap().buffer().dimensions();
-        let mut output = Self::new(frames.len(), dimensions);
+        let mut output = Self::new(dimensions);
 
         for frame in frames.iter() {
             let image_buffer = frame.buffer();
@@ -79,10 +78,9 @@ impl RgbaImageData {
         Ok(output)
     }
 
-    fn new(length: usize, dimensions: (u32, u32)) -> Self {
+    fn new(dimensions: (u32, u32)) -> Self {
         Self {
             dimensions,
-            length: length as u32,
             frames: Vec::new(),
         }
     }
@@ -127,9 +125,9 @@ impl RgbaImageData {
 }
 
 #[derive(Serialize, Deserialize)]
-struct DecodedFrame {
-    delay_ratio: (u32, u32),
-    pixels: Vec<(u8, u8, u8, u8)>,
+pub struct DecodedFrame {
+    pub delay_ratio: (u32, u32),
+    pub pixels: Vec<(u8, u8, u8, u8)>,
 }
 
 impl DecodedFrame {
